@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - PanPal{% endblock %}
+{% block content %}
+<div style="max-width: 900px; margin: 40px auto; padding: 0 20px;">
+
+  <h1 style="margin-bottom: 6px;">Admin Dashboard</h1>
+  <p style="color: #888; margin-bottom: 30px;">Manage users and their recipes.</p>
+
+  {% if messages %}
+  <div class="messages" style="margin-bottom: 20px;">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
+    <thead>
+      <tr style="background: #f5f5f5; text-align: left;">
+        <th style="padding: 14px 16px; font-weight: 600; color: #333;">Username</th>
+        <th style="padding: 14px 16px; font-weight: 600; color: #333;">Email</th>
+        <th style="padding: 14px 16px; font-weight: 600; color: #333;">Joined</th>
+        <th style="padding: 14px 16px; font-weight: 600; color: #333; text-align: center;">Recipes</th>
+        <th style="padding: 14px 16px; font-weight: 600; color: #333; text-align: center;">Staff</th>
+        <th style="padding: 14px 16px; font-weight: 600; color: #333;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr style="border-top: 1px solid #eee;">
+        <td style="padding: 12px 16px;">
+          {{ u.username }}
+          {% if u == request.user %}<span style="font-size: 11px; color: #888;">(you)</span>{% endif %}
+        </td>
+        <td style="padding: 12px 16px; color: #555;">{{ u.email|default:"—" }}</td>
+        <td style="padding: 12px 16px; color: #555;">{{ u.date_joined|date:"M d, Y" }}</td>
+        <td style="padding: 12px 16px; text-align: center;">{{ u.recipe_count }}</td>
+        <td style="padding: 12px 16px; text-align: center;">
+          {% if u.is_staff %}
+          <span style="color: #ff6b35; font-weight: 600;">Yes</span>
+          {% else %}
+          <span style="color: #aaa;">No</span>
+          {% endif %}
+        </td>
+        <td style="padding: 12px 16px; text-align: right;">
+          {% if u != request.user %}
+          <form method="post" action="{% url 'admin_delete_user' u.pk %}" style="display: inline;"
+            onsubmit="return confirm('Delete user {{ u.username|escapejs }} and all {{ u.recipe_count }} of their recipe(s)? This cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit"
+              style="padding: 5px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-family: inherit;">
+              Delete user
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" style="padding: 20px; text-align: center; color: #888;">No users found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

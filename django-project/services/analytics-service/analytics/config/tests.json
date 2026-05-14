@@ -1,0 +1,56 @@
+{
+  "tests": [
+    {
+      "name": "homepage_create_recipe_btn",
+      "description": "Test different call-to-action text on the homepage create recipe button",
+      "enabled": true,
+      "global": true,
+      "variants": [
+        {
+          "id": "control",
+          "weight": 50,
+          "config": {
+            "button_text": "Create Recipe",
+            "button_class": "btn-primary"
+          }
+        },
+        {
+          "id": "treatment",
+          "weight": 50,
+          "config": {
+            "button_text": "Add Recipe",
+            "button_class": "btn-secondary"
+          }
+        }
+      ],
+      "paths": ["/"],
+      "views": ["home"],
+      "target_events": ["create_recipe_click"]
+    },
+    {
+      "name": "homepage_layout_test",
+      "description": "Test different homepage layouts",
+      "enabled": true,
+      "global": false,
+      "variants": [
+        {
+          "id": "control",
+          "weight": 50,
+          "config": {
+            "layout": "grid"
+          }
+        },
+        {
+          "id": "treatment",
+          "weight": 50,
+          "config": {
+            "layout": "list"
+          }
+        }
+      ],
+      "paths": ["/"],
+      "views": ["home"],
+      "target_events": ["recipe_click"]
+    }
+  ]
+}

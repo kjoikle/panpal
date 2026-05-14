@@ -1,0 +1,38 @@
+# rbac.yaml
+# ServiceAccount and Role/RoleBinding that allow Chaos Mesh's controller
+# to perform chaos actions against pods in the recipeapp namespace.
+# Apply once before running any experiment:
+#   kubectl apply -f rbac.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-mesh-account
+  namespace: recipeapp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chaos-mesh-role
+  namespace: recipeapp
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["chaos-mesh.org"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chaos-mesh-binding
+  namespace: recipeapp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chaos-mesh-role
+subjects:
+  - kind: ServiceAccount
+    name: chaos-mesh-account
+    namespace: recipeapp

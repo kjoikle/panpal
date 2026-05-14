@@ -1,0 +1,42 @@
+# experiment2-network-latency.yaml
+#
+# Chaos Experiment 2: Network Latency Test
+# ──────────────────────────────────────────────────────────────────────────────
+# Injects 3 000 ms of network latency on all egress traffic that leaves
+# recipe-service pods destined for analytics-service pods.
+#
+# This deliberately exceeds the configured ANALYTICS_TIMEOUT (2 s) so that
+# ABTestAssignmentProxyMiddleware and ABTestImpressionProxyMiddleware are forced
+# to catch a requests.ReadTimeout, verifying that the graceful-degradation path
+# works correctly and recipe-service remains fully functional.
+#
+# Apply:   kubectl apply  -f experiment2-network-latency.yaml
+# Remove:  kubectl delete -f experiment2-network-latency.yaml
+# Status:  kubectl describe networkchaos network-latency-recipe-to-analytics -n recipeapp
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-latency-recipe-to-analytics
+  namespace: recipeapp
+spec:
+  action: delay
+  mode: all                 # affect all recipe-service pods
+  selector:
+    namespaces:
+      - recipeapp
+    labelSelectors:
+      app: recipe-service
+  delay:
+    latency: "3000ms"       # 3 s > ANALYTICS_TIMEOUT (2 s) — triggers timeout
+    jitter: "0ms"
+    correlation: "100"
+  direction: to             # egress only: recipe-service → analytics-service
+  target:
+    selector:
+      namespaces:
+        - recipeapp
+      labelSelectors:
+        app: analytics-service
+    mode: all
+  duration: "120s"          # auto-removes after 2 minutes

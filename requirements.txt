@@ -1,0 +1,12 @@
+Django>=4.2,<5.0
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0
+dj-database-url>=1.0.0
+gunicorn>=20.1.0
+whitenoise>=6.0.0
+coverage>=7.0
+locust==2.43.2
+beautifulsoup4
+gevent==25.9.1
+geventhttpclient==2.3.7
+greenlet==3.3.1

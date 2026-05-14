@@ -1,0 +1,121 @@
+databases:
+  - name: panpal-recipe-db
+    databaseName: recipeapp_db
+    user: recipeapp_user
+    plan: free
+
+  - name: panpal-analytics-db
+    databaseName: analytics_db
+    user: analytics_user
+    plan: free
+
+services:
+  - type: redis
+    name: panpal-redis
+    plan: free
+    region: oregon
+    ipAllowList: []
+
+  - type: web
+    name: panpal-analytics
+    runtime: docker
+    dockerfilePath: ./django-project/services/analytics-service/Dockerfile
+    dockerContext: ./django-project/services/analytics-service
+    region: oregon
+    plan: free
+    branch: main
+    dockerCommand: gunicorn analyticsproject.wsgi:application --bind 0.0.0.0:$PORT --workers 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: panpal-analytics.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: panpal-analytics-db
+          property: connectionString
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+
+  - type: web
+    name: panpal-scraper
+    runtime: docker
+    dockerfilePath: ./django-project/services/scraper-service/Dockerfile
+    dockerContext: ./django-project/services/scraper-service
+    region: oregon
+    plan: starter
+    branch: main
+    dockerCommand: gunicorn scraper_project.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: panpal-scraper.onrender.com
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: web
+    name: panpal-copilot
+    runtime: docker
+    dockerfilePath: ./django-project/services/copilot-service/Dockerfile
+    dockerContext: ./django-project/services/copilot-service
+    region: oregon
+    plan: starter
+    branch: main
+    dockerCommand: daphne -b 0.0.0.0 -p $PORT copilotproject.asgi:application
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: panpal-copilot.onrender.com,panpal-recipe.onrender.com
+      - key: REDIS_URL
+        sync: false  # Paste external Redis URL from Render dashboard (rediss://...)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        value: 21m00Tcm4TlvDq8ikWAM
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+
+  - type: web
+    name: panpal-recipe
+    runtime: docker
+    dockerfilePath: ./django-project/services/recipe-service/Dockerfile
+    dockerContext: ./django-project/services/recipe-service
+    region: oregon
+    plan: starter
+    branch: main
+    dockerCommand: gunicorn recipeapp.wsgi:application --bind 0.0.0.0:$PORT --workers 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: panpal-recipe.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: panpal-recipe-db
+          property: connectionString
+      - key: ANALYTICS_SERVICE_URL
+        value: https://panpal-analytics.onrender.com
+      - key: SCRAPER_SERVICE_URL
+        value: https://panpal-scraper.onrender.com
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://panpal-recipe.onrender.com
+      - key: COPILOT_SERVICE_WS_URL
+        value: wss://panpal-copilot.onrender.com
+      - key: ANALYTICS_TIMEOUT
+        value: "2"

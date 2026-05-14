@@ -1,0 +1,204 @@
+{% extends "base.html" %} {% load static %}
+
+{% block title %}Login - PanPal{% endblock %}
+
+{% block extra_css %}
+<style>
+  .alert {
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 6px;
+  }
+  .alert-error {
+    background: #fee;
+    color: #c33;
+  }
+  .alert-success {
+    background: #efe;
+    color: #363;
+  }
+</style>
+{% endblock %} 
+
+{% block body_class %} class="login-page"{% endblock %} 
+
+{% block body_content %}
+<div class="login-container">
+  <div class="left-panel">
+    <div class="logo">
+      <img
+        src="{% static 'images/PanPal_Logo_with_Name_v2.png' %}"
+        alt="PanPal"
+        style="height: 50px; width: auto"
+      />
+    </div>
+
+    <h1 class="tagline">Skip the stories.<br />Get straight to cooking.</h1>
+
+    <p class="description">
+      Search and save recipes from your favorite sources without the endless
+      blog posts. Just clean ingredients and clear instructions.
+    </p>
+
+    <ul class="features">
+      <li>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M16.7 5.3L8 14 3.3 9.3L4.7 7.9L8 11.2L15.3 3.9L16.7 5.3Z"
+            fill="#4CAF50"
+          />
+        </svg>
+        Search recipes from trusted food blogs
+      </li>
+      <li>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M16.7 5.3L8 14 3.3 9.3L4.7 7.9L8 11.2L15.3 3.9L16.7 5.3Z"
+            fill="#4CAF50"
+          />
+        </svg>
+        Save your favorites with personal notes
+      </li>
+      <li>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M16.7 5.3L8 14 3.3 9.3L4.7 7.9L8 11.2L15.3 3.9L16.7 5.3Z"
+            fill="#4CAF50"
+          />
+        </svg>
+        Filter by cuisine, time, and ingredients
+      </li>
+    </ul>
+  </div>
+
+  <div class="right-panel">
+    <div class="login-box">
+      <div class="tabs">
+        <button
+          class="tab {% if not show_signup %}active{% endif %}"
+          onclick='location.href="{% url 'login' %}"'
+        >
+          Login
+        </button>
+        <button
+          class="tab {% if show_signup %}active{% endif %}"
+          onclick='location.href="{% url 'signup' %}"'
+        >
+          Sign Up
+        </button>
+    </div>
+      {% if not show_signup %}
+      <!-- Login Form -->
+      <div class="tab-content active" id="login-content">
+        <h2>Welcome back</h2>
+        <p class="subtitle">
+          Enter your credentials to access your recipe collection
+        </p>
+
+        {% if messages %} {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+          {{ message }}
+        </div>
+        {% endfor %} {% endif %}
+
+        <form method="post" class="login-form">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Enter your username"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn-primary">Log in</button>
+
+          <p class="demo-note">
+            New user? Try credentials: alice / password123
+          </p>
+        </form>
+      </div>
+      {% else %}
+      <!-- Signup Form -->
+      <div class="tab-content active" id="signup-content">
+        <h2>Create account</h2>
+        <p class="subtitle">
+          Join PanPal to start saving your favorite recipes
+        </p>
+
+        {% if messages %} {% for message in messages %}
+         <div class="alert alert-{{ message.tags }}">
+          {{ message }}
+        </div>
+        {% endfor %} {% endif %}
+
+        <form method="post" class="signup-form">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Choose a username"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password1">Password</label>
+            <input
+              type="password"
+              id="password1"
+              name="password1"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password2">Confirm Password</label>
+            <input
+              type="password"
+              id="password2"
+              name="password2"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn-primary">Sign up</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

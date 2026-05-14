@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recipe-service
+  namespace: recipeapp
+  labels:
+    app: recipe-service
+    version: stable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recipe-service
+      version: stable
+  template:
+    metadata:
+      labels:
+        app: recipe-service
+        version: stable
+    spec:
+      initContainers:
+        - name: migrate
+          image: recipe-service:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          envFrom:
+            - configMapRef:
+                name: recipe-service-config
+            - secretRef:
+                name: recipe-service-secret
+      containers:
+        - name: recipe-service
+          image: recipe-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: recipe-service-config
+            - secretRef:
+                name: recipe-service-secret
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

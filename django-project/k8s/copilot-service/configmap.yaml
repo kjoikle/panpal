@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: copilot-service-config
+  namespace: recipeapp
+data:
+  DEBUG: "False"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,copilot-service"
+  REDIS_URL: "redis://redis:6379"
+  ELEVENLABS_VOICE_ID: "Rachel"

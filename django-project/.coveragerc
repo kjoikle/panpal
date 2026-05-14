@@ -1,0 +1,13 @@
+[run]
+omit =
+    .venv/*
+    */tests/*
+    **/test_*.py
+    **/Python/*/lib/python/site-packages/*
+
+[report]
+omit =
+    .venv/*
+    */tests/*
+    **/test_*.py
+    **/Python/*/lib/python/site-packages/*

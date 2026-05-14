@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+
+  <!-- Header -->
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom: 40px;">
+    <div>
+      <h1 style="margin:0;">{{ user.username }}</h1>
+      <p style="color:#888; margin:4px 0 0;">{{ user.email }} &bull; Member since {{ user.date_joined|date:"F Y" }}</p>
+    </div>
+    <!-- <a href="{% url 'change_password' %}" class="btn-save" style="text-decoration:none; white-space:nowrap;">
+      Change Password
+    </a> -->
+  </div>
+
+{#  {% else %}#}
+{#    <p style="color:#888;">No recommendations yet. Save some recipes to get started!</p>#}
+{#  {% endif %}#}
+{##}
+{#  <hr style="margin: 40px 0; border: none; border-top: 1px solid #e0e0e0;">#}
+
+  <!-- My Recipes -->
+  <h2>My Recipes ({{ user_recipes.count }})</h2>
+  {% if user_recipes %}
+  <div class="recipes-grid">
+    {% for recipe in user_recipes %}
+    <a href="{% url 'recipe_detail' recipe.pk %}" class="recipe-card">
+      {% if recipe.image_url %}
+      <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-card-image">
+      {% else %}
+      <img src="https://placehold.co/400x300/FF6B35/FFFFFF" alt="{{ recipe.title }}" class="recipe-card-image">
+      {% endif %}
+      <div class="recipe-card-content">
+        <div class="recipe-card-header">
+          <h3 class="recipe-card-title">{{ recipe.title }}</h3>
+        </div>
+        <div class="recipe-card-meta">
+          {% if recipe.prep_time or recipe.cook_time %}
+          <div class="meta-item"><span>{{ recipe.prep_time|add:recipe.cook_time }} min</span></div>
+          {% endif %}
+          <div class="meta-item"><span>{{ recipe.steps.count }} step{{ recipe.steps.count|pluralize }}</span></div>
+        </div>
+      </div>
+      <!-- <div class="recipe-card-actions">
+        <a href="{% url 'edit_recipe' recipe.pk %}" class="btn-save"
+           onclick="event.preventDefault(); event.stopPropagation(); window.location='{% url 'edit_recipe' recipe.pk %}'">
+          Edit
+        </a>
+      </div> -->
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p style="color:#888;">No recipes yet. <a href="{% url 'create_recipe' %}">Create one!</a></p>
+  {% endif %}
+
+  <hr style="margin: 40px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+  <!-- Saved Recipes -->
+  <h2>Saved Recipes ({{ saved_recipes|length }})</h2>
+  {% if saved_recipes %}
+  <div class="recipes-grid">
+    {% for recipe in saved_recipes %}
+    <a href="{% url 'recipe_detail' recipe.pk %}" class="recipe-card">
+      {% if recipe.image_url %}
+      <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-card-image">
+      {% else %}
+      <img src="https://placehold.co/400x300/FF6B35/FFFFFF" alt="{{ recipe.title }}" class="recipe-card-image">
+      {% endif %}
+      <div class="recipe-card-content">
+        <div class="recipe-card-header">
+          <h3 class="recipe-card-title">{{ recipe.title }}</h3>
+        </div>
+        <p class="recipe-card-source">From {{ recipe.author.username }}</p>
+        <div class="recipe-card-meta">
+          {% if recipe.prep_time or recipe.cook_time %}
+          <div class="meta-item"><span>{{ recipe.prep_time|add:recipe.cook_time }} min</span></div>
+          {% endif %}
+          <div class="meta-item"><span>{{ recipe.steps.count }} step{{ recipe.steps.count|pluralize }}</span></div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p style="color:#888;">No saved recipes yet.</p>
+  {% endif %}
+
+</div>
+{% endblock %}
+

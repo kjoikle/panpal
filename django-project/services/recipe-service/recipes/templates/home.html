@@ -1,0 +1,695 @@
+
+{% extends "base.html" %}
+
+{% block title %}
+    {% if view_mode == 'my_recipes' %}
+        My Recipes
+    {% elif view_mode == 'saved_recipes' %}
+        Saved Recipes
+    {% elif view_mode == 'recommended' %}
+        Recommended for You
+    {% else %}
+        Discover Recipes
+    {% endif %}
+    - PanPal
+{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    {% if view_mode == 'my_recipes' %}
+        <h1>My Recipes</h1>
+        <p>Recipes you've added to PanPal</p>
+    {% elif view_mode == 'saved_recipes' %}
+        <h1> Saved Recipes </h1>
+        <p> Recipes you've saved from All Recipes </p>
+    {% else %}
+        <h1>Discover Recipes</h1>
+        <p>Search through our curated collection of recipes from trusted food blogs</p>
+    {% endif %}
+</section>
+
+{% if show_view_tabs %}
+<div class="view-tabs">
+    <a href="{% url 'home' %}?view=my_recipes" class="view-tab {% if view_mode == 'my_recipes' %}active{% endif %}">
+        My Recipes
+    </a>
+    <a href="{% url 'home' %}?view=saved_recipes" class="view-tab {% if view_mode == 'saved_recipes' %}active{% endif %}">
+        Saved Recipes
+    </a>
+    <a href="{% url 'home' %}?view=recommended" class="view-tab {% if view_mode == 'recommended' %}active{% endif %}">
+        Recommended for You
+    </a>
+    <a href="{% url 'home' %}?view=all" class="view-tab {% if view_mode == 'all' %}active{% endif %}">
+        Browse All Recipes
+    </a>
+</div>
+{% endif %}
+
+<div class="search-section">
+    <form method="get" action="{% url 'home' %}" id="filterForm">
+        {% if view_mode %}
+            <input type="hidden" name="view" value="{{ view_mode }}">
+        {% endif %}
+        <div class="search-bar">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="#999" stroke-width="2" fill="none"/>
+                <path d="M12 12L17 17" stroke="#999" stroke-width="2"/>
+            </svg>
+            <input type="search" name="q" value="{{ query }}" placeholder="Search by recipe name, cuisine, ingredient, or source...">
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="cuisine">Cuisine Type:</label>
+                    <div class="custom-select">
+                        <div class="select-display" id="cuisineDisplay" tabindex="0">All Cuisines</div>
+                        <input type="hidden" name="cuisine" id="cuisineInput" value="{{ selected_cuisine }}">
+                        <div class="select-dropdown" id="cuisineDropdown">
+                            <div class="select-option" data-value="">All Cuisines</div>
+                            {% for tag in cuisine_tags %}
+                            <div class="select-option" data-value="{{ tag.id }}">{{ tag.name }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="dietary">Dietary Restrictions:</label>
+                    <div class="custom-multiselect">
+                        <div class="multiselect-display" id="dietaryDisplay" tabindex="0">No Restrictions</div>
+                        <div class="multiselect-dropdown" id="dietaryDropdown">
+                            {% for tag in dietary_tags %}
+                            <label class="multiselect-option">
+                                <input type="checkbox" name="dietary" value="{{ tag.id }}"
+                                    {% if tag.id|stringformat:"s" in selected_dietary %}checked{% endif %}>
+                                <span>{{ tag.name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="max_time">Time to Make:</label>
+                    <div class="custom-select">
+                        <div class="select-display" id="timeDisplay" tabindex="0">Any Time</div>
+                        <input type="hidden" name="max_time" id="timeInput" value="{{ selected_max_time }}">
+                        <div class="select-dropdown" id="timeDropdown">
+                            <div class="select-option" data-value="">Any Time</div>
+                            <div class="select-option" data-value="15">Under 15 min</div>
+                            <div class="select-option" data-value="30">Under 30 min</div>
+                            <div class="select-option" data-value="60">Under 1 hour</div>
+                            <div class="select-option" data-value="120">Under 2 hours</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn-filter">Apply Filters</button>
+                    {% if active_filter_count > 0 or query %}
+                    <a href="{% url 'home' %}{% if view_mode %}?view={{ view_mode }}{% endif %}" class="btn-clear-filters">Clear All</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if active_filter_count > 0 %}
+            <div class="active-filters">
+                <span class="active-filters-label">Active filters:</span>
+                {% if selected_cuisine %}
+                    {% for tag in cuisine_tags %}
+                        {% if tag.id|stringformat:"s" == selected_cuisine %}
+                        <span class="filter-chip">{{ tag.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% for dietary_id in selected_dietary %}
+                    {% for tag in dietary_tags %}
+                        {% if tag.id|stringformat:"s" == dietary_id %}
+                        <span class="filter-chip dietary">{{ tag.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if selected_max_time %}
+                    <span class="filter-chip time">
+                        {% if selected_max_time == "15" %}Under 15 min
+                        {% elif selected_max_time == "30" %}Under 30 min
+                        {% elif selected_max_time == "60" %}Under 1 hour
+                        {% elif selected_max_time == "120" %}Under 2 hours
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if query %}
+    <p class="results-count">
+        Showing <span id="currentCount">{{ recipes|length }}</span><span id="totalCount">{% if pagination.total_count > recipes|length %} of {{ pagination.total_count }}{% endif %}</span>
+        recipe{{ recipes|length|pluralize }} for "{{ query }}"
+        {% if active_filter_count > 0 %} with filters applied{% endif %}
+    </p>
+    {% else %}
+    <p class="results-count">
+        Showing <span id="currentCount">{{ recipes|length }}</span><span id="totalCount">{% if pagination.total_count > recipes|length %} of {{ pagination.total_count }}{% endif %}</span>
+        recipe{{ recipes|length|pluralize }}
+        {% if active_filter_count > 0 %} matching your filters{% endif %}
+    </p>
+    {% endif %}
+</div>
+
+<div class="recipes-{% if ab_tests.homepage_layout_test %}{{ ab_tests.homepage_layout_test.config.layout }}{% else %}grid{% endif %}"
+     id="recipesContainer"
+     {% if ab_tests.homepage_layout_test %}
+     data-ab-test="homepage_layout_test"
+     data-ab-variant="{{ ab_tests.homepage_layout_test.variant_id }}"
+     {% endif %}>
+    {% if recipes %}
+        {% for recipe in recipes %}
+        <a href="{% url 'recipe_detail' recipe.pk %}" class="recipe-card"
+           {% if ab_tests.homepage_layout_test %}
+           data-ab-test="homepage_layout_test"
+           data-ab-variant="{{ ab_tests.homepage_layout_test.variant_id }}"
+           data-ab-event="recipe_click"
+           {% endif %}>
+            {% if recipe.image_url %}
+            <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-card-image">
+            {% else %}
+            <img src="https://placehold.co/400x300/FF6B35/FFFFFF?text={{ recipe.title|slice:':20' }}"
+                 alt="{{ recipe.title }}" class="recipe-card-image">
+            {% endif %}
+
+            <div class="recipe-card-content">
+                <div class="recipe-card-header">
+                    <h3 class="recipe-card-title">{{ recipe.title }}</h3>
+                    {% if recipe.cuisine_tag %}
+                        <span class="cuisine-tag">{{ recipe.cuisine_tag }}</span>
+                    {% endif %}
+                </div>
+                <p class="recipe-card-source">
+                    {% if recipe.recipe_author %}
+                        By {{ recipe.recipe_author }}
+                    {% else %}
+                        From {{ recipe.author.username }}
+                    {% endif %}
+                </p>
+                <div class="recipe-card-meta">
+                    {% if recipe.prep_time or recipe.cook_time %}
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                            <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <path d="M10 6V10H14" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <span>
+                            {% if recipe.prep_time and recipe.cook_time %}
+                                {{ recipe.prep_time|add:recipe.cook_time }} min
+                            {% elif recipe.prep_time %}
+                                {{ recipe.prep_time }} min
+                            {% elif recipe.cook_time %}
+                                {{ recipe.cook_time }} min
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="meta-item">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 3C7 3 5 5 5 7C5 7 4 7 4 8C4 9 5 9 5 9V13C5 14.5 7 16 10 16C13 16 15 14.5 15 13V9C15 9 16 9 16 8C16 7 15 7 15 7C15 5 13 3 10 3Z" fill="currentColor"/>
+                        </svg>
+                        <span>{{ recipe.steps.count }} step{{ recipe.steps.count|pluralize }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if user.is_authenticated %}
+            <div class="recipe-card-actions">
+                <form method="POST" action="{% url 'save_recipe' recipe.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-save {% if recipe.is_saved %}saved{% endif %}"
+                        {% if recipe.is_saved %}disabled{% endif %}
+                        {% if ab_tests.homepage_save_recipe_btn %}
+                        data-ab-test="homepage_save_recipe_btn"
+                        data-ab-variant="{{ ab_tests.homepage_save_recipe_btn.variant_id }}"
+                        data-ab-event="save_recipe_click"
+                        {% endif %}>
+                        {% if recipe.is_saved %}
+                            Saved
+                        {% else %}
+                            Save
+                        {% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    {% else %}
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+            {% if view_mode == 'my_recipes' and not show_filter_warning %}
+                <h2 style="color: #666; margin-bottom: 20px;">You haven't added any recipes yet</h2>
+                <p style="color: #999; margin-bottom: 30px;">
+                    Start building your collection by creating your first recipe!
+                </p>
+            {% elif view_mode == 'my_recipes' and show_filter_warning %}
+                <h2 style="color: #666; margin-bottom: 20px;">No matching recipes found</h2>
+                <p style="color: #999; margin-bottom: 30px;">
+                    {% if query and active_filter_count > 0 %}
+                        No recipes match your search and filters. Try using less restrictive criteria or
+                        <a href="{% url 'home' %}?view=my_recipes" style="color: #FF6B35;">view all your recipes</a>
+                    {% elif query %}
+                        No recipes match your search. Try a different search term or
+                        <a href="{% url 'home' %}?view=my_recipes" style="color: #FF6B35;">view all your recipes</a>
+                    {% elif active_filter_count > 0 %}
+                        No recipes match your current filters. Try using less restrictive criteria or
+                        <a href="{% url 'home' %}?view=my_recipes" style="color: #FF6B35;">view all your recipes</a>
+                    {% endif %}
+                </p>
+            {% else %}
+                <h2 style="color: #666; margin-bottom: 20px;">No recipes found</h2>
+                <p style="color: #999; margin-bottom: 30px;">
+                    {% if show_filter_warning %}
+                        {% if query and active_filter_count > 0 %}
+                            No recipes match your search and filters. Try using less restrictive criteria or
+                            <a href="{% url 'home' %}{% if view_mode %}?view={{ view_mode }}{% endif %}" style="color: #FF6B35;">view all recipes</a>
+                        {% elif query %}
+                            No recipes match your search. Try a different search term or
+                            <a href="{% url 'home' %}{% if view_mode %}?view={{ view_mode }}{% endif %}" style="color: #FF6B35;">view all recipes</a>
+                        {% elif active_filter_count > 0 %}
+                            No recipes match your current filters. Try using less restrictive criteria or
+                            <a href="{% url 'home' %}{% if view_mode %}?view={{ view_mode }}{% endif %}" style="color: #FF6B35;">view all recipes</a>
+                        {% endif %}
+                    {% else %}
+                        Get started by creating your first recipe!
+                    {% endif %}
+                </p>
+            {% endif %}
+            <a href="{% url 'create_recipe' %}" class="btn-primary" style="display: inline-block; text-decoration: none;"
+               {% if ab_tests.homepage_create_recipe_btn %}
+               data-ab-test="homepage_create_recipe_btn"
+               data-ab-variant="{{ ab_tests.homepage_create_recipe_btn.variant_id }}"
+               data-ab-event="create_recipe_click"
+               {% endif %}>
+                {% if ab_tests.homepage_create_recipe_btn %}
+                    {{ ab_tests.homepage_create_recipe_btn.config.button_text }}
+                {% else %}
+                    Create Recipe
+                {% endif %}
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Pagination data from server
+    const INITIAL_PAGINATION = {
+        hasNext: {{ pagination.has_next|lower }},
+        totalCount: {{ pagination.total_count|default:0 }}
+    };
+    const USER_AUTHENTICATED = {{ user.is_authenticated|lower }};
+
+    // Helper function to get CSRF cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Custom dropdown functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Single-select dropdown (Cuisine & Time)
+        function initSingleSelect(displayId, dropdownId, inputId, defaultText) {
+            const display = document.getElementById(displayId);
+            const dropdown = document.getElementById(dropdownId);
+            const input = document.getElementById(inputId);
+            const options = dropdown.querySelectorAll('.select-option');
+
+            // Set initial selection
+            const initialValue = input.value;
+            if (initialValue) {
+                const selectedOption = Array.from(options).find(opt => opt.dataset.value === initialValue);
+                if (selectedOption) {
+                    display.textContent = selectedOption.textContent;
+                    selectedOption.classList.add('selected');
+                }
+            }
+
+            // Toggle dropdown
+            display.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Close other dropdowns
+                document.querySelectorAll('.select-dropdown.active, .multiselect-dropdown.active').forEach(d => {
+                    if (d !== dropdown) d.classList.remove('active');
+                });
+                dropdown.classList.toggle('active');
+                display.focus();
+            });
+
+            // Handle option selection
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    const value = this.dataset.value;
+                    const text = this.textContent;
+
+                    // Update hidden input
+                    input.value = value;
+
+                    // Update display
+                    display.textContent = text;
+
+                    // Update selected state
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+
+                    // Close dropdown
+                    dropdown.classList.remove('active');
+                });
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!dropdown.contains(e.target) && e.target !== display) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Initialize Cuisine dropdown
+        initSingleSelect('cuisineDisplay', 'cuisineDropdown', 'cuisineInput', 'All Cuisines');
+
+        // Initialize Time dropdown
+        initSingleSelect('timeDisplay', 'timeDropdown', 'timeInput', 'Any Time');
+
+        // Multi-select dropdown (Dietary Restrictions)
+        const dietaryDisplay = document.getElementById('dietaryDisplay');
+        const dietaryDropdown = document.getElementById('dietaryDropdown');
+        const checkboxes = dietaryDropdown.querySelectorAll('input[type="checkbox"]');
+
+        // Update display text based on selected checkboxes
+        function updateDietaryDisplay() {
+            const selected = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.nextElementSibling.textContent);
+
+            if (selected.length === 0) {
+                dietaryDisplay.textContent = 'No Restrictions';
+            } else if (selected.length === 1) {
+                dietaryDisplay.textContent = selected[0];
+            } else {
+                dietaryDisplay.textContent = selected.length + ' selected';
+            }
+        }
+
+        // Toggle dropdown
+        dietaryDisplay.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Close other dropdowns
+            document.querySelectorAll('.select-dropdown.active, .multiselect-dropdown.active').forEach(d => {
+                if (d !== dietaryDropdown) d.classList.remove('active');
+            });
+            dietaryDropdown.classList.toggle('active');
+            dietaryDisplay.focus();
+        });
+
+        // Update display when checkboxes change
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateDietaryDisplay);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dietaryDropdown.contains(e.target) && e.target !== dietaryDisplay) {
+                dietaryDropdown.classList.remove('active');
+            }
+        });
+
+        // Prevent dropdown from closing when clicking inside it
+        dietaryDropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+
+        // Initialize display on page load
+        updateDietaryDisplay();
+
+        // A/B Test click tracking
+        document.querySelectorAll('[data-ab-test]').forEach(function(el) {
+            el.addEventListener('click', function() {
+                var testName = this.dataset.abTest;
+                var variantId = this.dataset.abVariant;
+                var eventType = this.dataset.abEvent;
+                if (testName && variantId && eventType) {
+                    fetch('{% url "ab_test_event" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            test_name: testName,
+                            variant_id: variantId,
+                            event_type: eventType
+                        }),
+                        keepalive: true  // Ensures request completes even if page navigates
+                    }).catch(function() {});  // Silently fail - don't block navigation
+                }
+            });
+        });
+
+        // Infinite Scroll Implementation
+        const recipesContainer = document.getElementById('recipesContainer');
+
+        if (recipesContainer) {
+            // Create loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'infinite-scroll-loading';
+            loadingIndicator.style.display = 'none';
+            loadingIndicator.innerHTML = '<div class="loading-spinner"></div><p>Loading more recipes...</p>';
+            recipesContainer.parentElement.appendChild(loadingIndicator);
+
+            // Create end message
+            const endMessage = document.createElement('div');
+            endMessage.className = 'infinite-scroll-end';
+            endMessage.style.display = 'none';
+            endMessage.textContent = "You've reached the end!";
+            recipesContainer.parentElement.appendChild(endMessage);
+
+            // Get current filters from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const filters = {
+                q: urlParams.get('q') || '',
+                cuisine: urlParams.get('cuisine') || '',
+                dietary: urlParams.getAll('dietary'),
+                max_time: urlParams.get('max_time') || '',
+                view: urlParams.get('view') || ''
+            };
+
+            // Infinite scroll state
+            let currentPage = 1;
+            let isLoading = false;
+            let hasMore = INITIAL_PAGINATION.hasNext;
+
+            // Scroll event handler with throttling
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+                scrollTimeout = setTimeout(function() {
+                    if (isLoading || !hasMore) return;
+
+                    const scrollHeight = document.documentElement.scrollHeight;
+                    const scrollTop = document.documentElement.scrollTop;
+                    const clientHeight = document.documentElement.clientHeight;
+
+                    if (scrollTop + clientHeight >= scrollHeight - 300) {
+                        loadMore();
+                    }
+                }, 100);
+            });
+
+            // Load more recipes
+            function loadMore() {
+                if (isLoading || !hasMore) return;
+
+                isLoading = true;
+                loadingIndicator.style.display = 'block';
+
+                const nextPage = currentPage + 1;
+                const params = new URLSearchParams({
+                    page: nextPage,
+                    page_size: 18,
+                    ...filters
+                });
+
+                // Handle multiple dietary values
+                if (filters.dietary.length > 0) {
+                    params.delete('dietary');
+                    filters.dietary.forEach(function(d) {
+                        params.append('dietary', d);
+                    });
+                }
+
+                fetch('/api/recipes/?' + params.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Failed to load recipes');
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.recipes.length > 0) {
+                        data.recipes.forEach(function(recipe) {
+                            recipesContainer.appendChild(createRecipeCard(recipe));
+                        });
+                        currentPage = nextPage;
+                        hasMore = data.pagination.has_next;
+                        updateResultsCount(data.pagination.total_count);
+                    } else {
+                        hasMore = false;
+                    }
+
+                    if (!hasMore) {
+                        endMessage.style.display = 'block';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error loading recipes:', error);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'infinite-scroll-error';
+                    errorDiv.textContent = 'Failed to load more recipes. Please try again.';
+                    recipesContainer.parentElement.appendChild(errorDiv);
+                    setTimeout(function() { errorDiv.remove(); }, 5000);
+                })
+                .finally(function() {
+                    isLoading = false;
+                    loadingIndicator.style.display = 'none';
+                });
+            }
+
+            // Create recipe card HTML
+            function createRecipeCard(recipe) {
+                const card = document.createElement('a');
+                card.href = recipe.url;
+                card.className = 'recipe-card';
+
+                // Add A/B test attributes if present
+                const containerABTest = recipesContainer.dataset.abTest;
+                const containerABVariant = recipesContainer.dataset.abVariant;
+                if (containerABTest) {
+                    card.dataset.abTest = containerABTest;
+                    card.dataset.abVariant = containerABVariant;
+                    card.dataset.abEvent = 'recipe_click';
+                }
+
+                const imageUrl = recipe.image_url ||
+                    'https://placehold.co/400x300/FF6B35/FFFFFF?text=' + encodeURIComponent(recipe.title.substring(0, 20));
+
+                const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
+                const timeDisplay = totalTime > 0 ? totalTime + ' min' : '';
+
+                let cardHTML = '<img src="' + imageUrl + '" alt="' + recipe.title + '" class="recipe-card-image">';
+                cardHTML += '<div class="recipe-card-content">';
+                cardHTML += '<div class="recipe-card-header">';
+                cardHTML += '<h3 class="recipe-card-title">' + recipe.title + '</h3>';
+                if (recipe.cuisine_tag) {
+                    cardHTML += '<span class="cuisine-tag">' + recipe.cuisine_tag + '</span>';
+                }
+                cardHTML += '</div>';
+                cardHTML += '<p class="recipe-card-source">';
+                if (recipe.recipe_author) {
+                    cardHTML += 'By ' + recipe.recipe_author;
+                } else {
+                    cardHTML += 'From ' + recipe.author_username;
+                }
+                cardHTML += '</p>';
+                cardHTML += '<div class="recipe-card-meta">';
+                if (timeDisplay) {
+                    cardHTML += '<div class="meta-item">';
+                    cardHTML += '<svg width="16" height="16" viewBox="0 0 20 20" fill="none">';
+                    cardHTML += '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="2" fill="none"/>';
+                    cardHTML += '<path d="M10 6V10H14" stroke="currentColor" stroke-width="2"/>';
+                    cardHTML += '</svg>';
+                    cardHTML += '<span>' + timeDisplay + '</span>';
+                    cardHTML += '</div>';
+                }
+                cardHTML += '<div class="meta-item">';
+                cardHTML += '<svg width="16" height="16" viewBox="0 0 20 20" fill="none">';
+                cardHTML += '<path d="M10 3C7 3 5 5 5 7C5 7 4 7 4 8C4 9 5 9 5 9V13C5 14.5 7 16 10 16C13 16 15 14.5 15 13V9C15 9 16 9 16 8C16 7 15 7 15 7C15 5 13 3 10 3Z" fill="currentColor"/>';
+                cardHTML += '</svg>';
+                cardHTML += '<span>' + recipe.steps_count + ' step' + (recipe.steps_count !== 1 ? 's' : '') + '</span>';
+                cardHTML += '</div>';
+                cardHTML += '</div>';
+                cardHTML += '</div>';
+
+                if (USER_AUTHENTICATED) {
+                    const isSaved = recipe.is_saved;
+                    cardHTML += '<div class="recipe-card-actions">';
+                    cardHTML += '<form method="POST" action="/recipe/' + recipe.id + '/save/">';
+                    cardHTML += '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCookie('csrftoken') + '">';
+                    cardHTML += '<button type="submit" class="btn-save' + (isSaved ? ' saved' : '') + '"' + (isSaved ? ' disabled' : '') + '>';
+                    cardHTML += isSaved ? 'Saved' : 'Save';
+                    cardHTML += '</button>';
+                    cardHTML += '</form>';
+                    cardHTML += '</div>';
+                }
+
+                card.innerHTML = cardHTML;
+
+                // Attach A/B test tracking if needed
+                if (containerABTest) {
+                    card.addEventListener('click', function() {
+                        fetch('{% url "ab_test_event" %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                test_name: containerABTest,
+                                variant_id: containerABVariant,
+                                event_type: 'recipe_click'
+                            }),
+                            keepalive: true
+                        }).catch(function() {});
+                    });
+                }
+
+                return card;
+            }
+
+            // Update results count
+            let knownTotal = INITIAL_PAGINATION.totalCount;
+
+            function updateResultsCount(latestTotal) {
+                if (latestTotal !== undefined) {
+                    knownTotal = latestTotal;
+                }
+                const countSpan = document.getElementById('currentCount');
+                const totalSpan = document.getElementById('totalCount');
+                if (!hasMore) {
+                    // Scroll complete — use server total as the authoritative count
+                    if (countSpan) countSpan.textContent = knownTotal;
+                    if (totalSpan) totalSpan.textContent = '';
+                } else {
+                    const currentCount = recipesContainer.querySelectorAll('.recipe-card').length;
+                    if (countSpan) countSpan.textContent = currentCount;
+                    if (totalSpan) totalSpan.textContent = currentCount < knownTotal ? ' of ' + knownTotal : '';
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

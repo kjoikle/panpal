@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.title }} - PanPal{% endblock %}
+
+{% block content %}
+
+<!-- Kitchen Copilot: active banner (hidden until started) -->
+<div id="copilot-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:1001;
+  background:linear-gradient(90deg,#ff6b35,#e55a2b); color:#fff; padding:12px 20px;
+  align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+  <span style="font-weight:600; font-size:1rem;">🎙️ Kitchen Copilot active</span>
+  <button onclick="stopKitchenCopilot()" style="background:rgba(255,255,255,0.2); border:none;
+    color:#fff; padding:6px 14px; border-radius:20px; cursor:pointer; font-size:0.9rem;">
+    Stop ✕
+  </button>
+</div>
+
+<!-- Kitchen Copilot: timer bar (below banner, tiles left-aligned) -->
+<div id="copilot-timer-bar" style="display:none; position:fixed; top:50px; left:0; right:0; z-index:1000;
+  background:#1a2540; padding:8px 16px; flex-direction:row; flex-wrap:wrap;
+  gap:10px; align-items:flex-start; border-bottom:1px solid #2e3f5c;">
+</div>
+
+<!-- Kitchen Copilot: conversation + controls panel (hidden until started) -->
+<div id="copilot-panel" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:999;
+  background:#1a2540; color:#f0f0f0; padding:16px 20px; box-shadow:0 -4px 20px rgba(0,0,0,0.3);
+  max-height:40vh; overflow-y:auto; font-family:inherit;">
+
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+    <div id="mic-indicator" style="width:10px; height:10px; border-radius:50%;
+      background:#555; flex-shrink:0; transition:background 0.2s;" title="Mic status"></div>
+    <div id="copilot-transcript" style="flex:1; font-size:0.95rem; line-height:1.6;
+      max-height:120px; overflow-y:auto; color:#e0e0e0;"></div>
+  </div>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+    <button onclick="sendCopilotMessage('Yes, done!')" class="copilot-btn">Yes ✓</button>
+    <button onclick="sendCopilotMessage('No, not yet')" class="copilot-btn">No ✗</button>
+    <button onclick="sendCopilotMessage('I\'m ready, let\'s go!')" class="copilot-btn">I'm ready 👍</button>
+    <button onclick="sendCopilotMessage('Next step please')" class="copilot-btn">Next step →</button>
+  </div>
+
+  <div style="display:flex; gap:8px;">
+    <input id="copilot-text-input" type="text" placeholder="Or type a response..."
+      style="flex:1; background:#243357; border:1px solid #2e3f5c; color:#f0f0f0; padding:8px 12px;
+      border-radius:6px; font-size:0.9rem; outline:none;"
+      onkeydown="if(event.key==='Enter') sendCopilotQuestion()">
+    <button onclick="sendCopilotQuestion()" class="copilot-btn">Send</button>
+  </div>
+</div>
+
+<style>
+.copilot-btn {
+  background: #ff6b35; border: none; color: #fff; padding: 8px 16px;
+  border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+  transition: background 0.2s;
+}
+.copilot-btn:hover { background: #e55a2b; }
+
+.copilot-timer-tile {
+  background: #243357;
+  border: 1px solid #ff6b35;
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+.copilot-timer-tile .tile-icon { font-size: 1.2rem; }
+.copilot-timer-tile .tile-label { font-size: 0.75rem; color: #aaa; white-space: nowrap; }
+.copilot-timer-tile .tile-countdown {
+  font-size: 1.4rem; font-weight: 700; color: #ff6b35;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.copilot-timer-tile.expired { border-color: #888; }
+.copilot-timer-tile.expired .tile-countdown { color: #888; }
+.timer-stop-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.timer-stop-btn:hover { color: #ff6b35; }
+</style>
+
+<a href="{% url 'home' %}" class="back-link">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path d="M12 3L5 10L12 17" stroke="currentColor" stroke-width="2" />
+  </svg>
+  Back to recipes
+</a>
+
+<div class="recipe-detail">
+  <div class="recipe-hero">
+    {% if recipe.image_url %}
+    <img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" class="recipe-hero-image" />
+    {% else %}
+    <img src="https://placehold.co/800x400/FF6B35/FFFFFF?text={{ recipe.title|slice:':30' }}" alt="{{ recipe.title }}" class="recipe-hero-image" />
+    {% endif %}
+  </div>
+
+  <div class="recipe-header">
+    <div class="recipe-title-section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <h1 class="recipe-title" style="margin: 0">{{ recipe.title }}</h1>
+
+          {% if user.is_authenticated %}
+          <div style="position: relative; display: inline-block;">
+            <button id="share-btn" onclick="toggleShareMenu()" title="Share recipe"
+              style="padding: 6px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit;">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                <circle cx="15" cy="4" r="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="5" cy="10" r="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="15" cy="16" r="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M7 9l6-4M7 11l6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span>Share</span>
+            </button>
+
+            <div id="share-menu" style="display:none; position:absolute; left:0; top:35px; background:white; border:1px solid #ddd; border-radius:6px; padding:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1); z-index:100; min-width:180px;">
+              {% url 'recipe_detail' recipe.pk as recipe_url %}
+              {% with full_url=request.scheme|add:"://"|add:request.get_host|add:recipe_url %}
+                <a href="javascript:void(0)" onclick="nativeShare()" class="share-item" style="display: block; padding: 8px; text-decoration: none; color: #333; font-size: 13px;">📱 Share...</a>
+                <a href="javascript:void(0)" onclick="copyRecipeLink()" class="share-item" style="display: block; padding: 8px; text-decoration: none; color: #333; font-size: 13px;">🔗 Copy Link</a><a href="#" onclick="shareEmail(event)" class="share-item" style="display: block; padding: 8px; text-decoration: none; color: #333; font-size: 13px;">📧 Email</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ full_url|urlencode }}" target="_blank" class="share-item" style="display: block; padding: 8px; text-decoration: none; color: #333; font-size: 13px;">
+                    📘 Facebook </a>
+                  <a href="https://wa.me/?text={{ recipe.title|urlencode }}%20{{ full_url|urlencode }}" target="_blank" class="share-item" style="display: block; padding: 8px; text-decoration: none; color: #333; font-size: 13px;">💬 WhatsApp</a>
+                <a href="https://twitter.com/intent/tweet?url={{ full_url|urlencode }}&text={{ recipe.title|urlencode }}" target="_blank" class="share-item" style="display: block; padding: 8px; text-decoration: none; color: #333; font-size: 13px;">🐦 Twitter</a>
+              {% endwith %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          {% if user == recipe.author or user.is_staff %}
+          <a href="{% url 'edit_recipe' recipe.pk %}" title="Edit recipe"
+            style="padding: 6px 12px; background-color: #ff6b35; color: white; text-decoration: none; font-size: 12px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M14.5 2.5L17.5 5.5L6.5 16.5L2 18L3.5 13.5L14.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Edit</span>
+          </a>
+          <form method="post" action="{% url 'delete_recipe' recipe.pk %}" style="margin: 0" onsubmit="return confirm('Are you sure you want to delete this recipe?');">
+            {% csrf_token %}
+            <button type="submit" title="Delete recipe"
+              style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit;">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                <path d="M3 6H17M8 6V4C8 3 9 2 10 2C11 2 12 3 12 4V6M15 6V16C15 17 14 18 13 18H7C6 18 5 17 5 16V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Delete</span>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tag-groups">
+        {% if cuisine_tags %}
+        <div class="tag-group">
+          <span class="tag-label">Cuisine:</span>
+          {% for tag in cuisine_tags %}
+          <span class="cuisine-tag">{{ tag.name }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if dietary_tags %}
+        <div class="tag-group">
+          <span class="tag-label">Dietary:</span>
+          {% for tag in dietary_tags %}
+          <span class="dietary-tag">{{ tag.name }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="recipe-meta">
+      {% if recipe.recipe_author %}
+      <div class="meta-item">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 2C6.69 2 4 4.69 4 8C4 11.31 6.69 14 10 14C13.31 14 16 11.31 16 8C16 4.69 13.31 2 10 2Z" />
+        </svg>
+        <span>By {{ recipe.recipe_author }}</span>
+      </div>
+      {% endif %}
+
+      {% if recipe.prep_time or recipe.cook_time %}
+      <div class="meta-item">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="10" cy="10" r="7" />
+          <path d="M10 6V10H14" />
+        </svg>
+        <span>
+          {% if recipe.prep_time %}Prep: {{ recipe.prep_time }} min{% endif %}
+          {% if recipe.prep_time and recipe.cook_time %} | {% endif %}
+          {% if recipe.cook_time %}Cook: {{ recipe.cook_time }} min{% endif %}
+        </span>
+      </div>
+      {% endif %}
+
+      <div class="meta-item">
+        <span>{{ steps|length }} step{{ steps|length|pluralize }}</span>
+      </div>
+
+      <div class="meta-item">
+        <span>Uploaded by {{ recipe.author.username }}</span>
+      </div>
+
+      {% if recipe.source_url %}
+      <div class="meta-item">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 11a4 4 0 0 0 5.66.06l2-2a4 4 0 0 0-5.66-5.66l-1.1 1.1" />
+          <path d="M12 9a4 4 0 0 0-5.66-.06l-2 2a4 4 0 0 0 5.66 5.66l1.1-1.1" />
+        </svg>
+        <a href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">View original recipe</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="recipe-content">
+    {% if recipe.description %}
+    <section class="recipe-section">
+      <h2>Description</h2>
+      <p style="line-height: 1.8; color: #555">{{ recipe.description }}</p>
+    </section>
+    {% endif %}
+
+    <!-- Kitchen Copilot launch button -->
+    <div style="margin: 20px 0;">
+      <button id="copilot-start-btn" onclick="startKitchenCopilot()"
+        style="background:linear-gradient(90deg,#ff6b35,#e55a2b); border:none; color:#fff;
+        padding:14px 28px; border-radius:30px; font-size:1rem; font-weight:700; cursor:pointer;
+        box-shadow:0 4px 15px rgba(255,107,53,0.4); transition:all 0.2s; display:flex;
+        align-items:center; gap:10px;">
+        <span style="font-size:1.3rem;">🍳</span>
+        Start cooking with Kitchen Copilot
+      </button>
+    </div>
+
+    {% if recipe.ingredients %}
+    <section class="recipe-section">
+      <h2>Ingredients</h2>
+      <ul class="ingredients-list">
+        {% for ingredient in recipe.ingredients.splitlines %}
+          {% if ingredient.strip %}
+            <li>{{ ingredient }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if steps %}
+    <section class="recipe-section">
+      <h2>Instructions</h2>
+      <ol class="instructions-list">
+        {% for step in steps %}
+        <li>
+          <span class="step-number">{{ step.step_number }}</span>
+          <div class="step-content">{{ step.instruction_text }}</div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function toggleShareMenu() {
+  var menu = document.getElementById("share-menu");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+document.addEventListener("click", function(event) {
+  var menu = document.getElementById("share-menu");
+  var btn = document.getElementById("share-btn");
+  if (menu && btn && !btn.contains(event.target) && !menu.contains(event.target)) {
+    menu.style.display = "none";
+  }
+});
+
+function nativeShare() {
+  if (navigator.share) {
+    navigator.share({
+      title: "{{ recipe.title|escapejs }}",
+      text: "Check out this recipe on PanPal!",
+      url: window.location.href
+    });
+  } else {
+    alert("Native sharing not supported on this browser.");
+  }
+}
+
+function copyRecipeLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    alert("Link copied to clipboard!");
+  });
+}
+
+function shareEmail(e) {
+  e.preventDefault();
+  const subject = encodeURIComponent("{{ recipe.title|escapejs }}");
+  const body = encodeURIComponent("Check out this recipe on PanPal:\n\n" + window.location.href);
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+// ─── Kitchen Copilot ────────────────────────────────────────────────────────
+
+const COPILOT_WS_BASE = "{{ copilot_ws_url }}";
+const COPILOT_RECIPE_ID = "{{ recipe.pk }}";
+const COPILOT_INGREDIENTS = "{{ recipe.ingredients|escapejs }}";
+const COPILOT_STEPS = {{ steps_json|safe }};
+
+let copilotWS = null;
+let audioChunks = [];
+let currentAudio = null;
+let activeTimers = {};
+let recognition = null;
+let recognitionActive = false;
+let aiSpeaking = false;
+
+function startKitchenCopilot() {
+  if (copilotWS && copilotWS.readyState === WebSocket.OPEN) return;
+
+  const wsUrl = `${COPILOT_WS_BASE}/ws/copilot/${COPILOT_RECIPE_ID}/`;
+  copilotWS = new WebSocket(wsUrl);
+
+  copilotWS.onopen = function() {
+    copilotWS.send(JSON.stringify({
+      type: 'start',
+      recipe_id: parseInt(COPILOT_RECIPE_ID),
+      ingredients: COPILOT_INGREDIENTS,
+      steps: COPILOT_STEPS,
+    }));
+    showCopilotUI();
+    audioChunks = [];
+    // Start passive listening after a short delay (let AI speak first)
+    setTimeout(startRecognition, 1000);
+  };
+
+  copilotWS.onmessage = function(event) {
+    const msg = JSON.parse(event.data);
+    handleCopilotMessage(msg);
+  };
+
+  copilotWS.onclose = function() {
+    hideCopilotUI();
+  };
+
+  copilotWS.onerror = function(err) {
+    appendTranscript('⚠️ Could not connect to Kitchen Copilot. Is the service running?');
+  };
+}
+
+function handleCopilotMessage(msg) {
+  if (msg.type === 'audio_chunk') {
+    audioChunks.push(msg.data);
+  } else if (msg.type === 'audio_end') {
+    playAudioChunks();
+  } else if (msg.type === 'text_transcript') {
+    appendTranscript('🎙️ ' + msg.text);
+  } else if (msg.type === 'timer_start') {
+    startFrontendTimer(msg.label, msg.duration_seconds);
+  } else if (msg.type === 'timer_complete') {
+    markTimerComplete(msg.label);
+  } else if (msg.type === 'timer_adjust') {
+    adjustFrontendTimer(msg.label, msg.delta_seconds);
+  } else if (msg.type === 'timer_cancel') {
+    cancelFrontendTimer(msg.label);
+  } else if (msg.type === 'state_change') {
+    // Could highlight current step in instructions here
+  } else if (msg.type === 'tts_error') {
+    console.warn('TTS error:', msg.message);
+    appendTranscript('⚠️ Voice error: ' + msg.message);
+  }
+}
+
+function interruptAudio() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = '';
+    currentAudio = null;
+  }
+  audioChunks = [];
+  aiSpeaking = false;
+}
+
+function playAudioChunks() {
+  if (!audioChunks.length) return;
+  const combined = audioChunks.join('');
+  audioChunks = [];
+  interruptAudio();
+  const audio = new Audio('data:audio/mpeg;base64,' + combined);
+  currentAudio = audio;
+  aiSpeaking = true;
+  stopRecognition();
+  audio.onended = function() {
+    if (currentAudio === audio) currentAudio = null;
+    aiSpeaking = false;
+    startRecognition();
+  };
+  audio.play().catch(function(err) {
+    console.warn('Audio play error:', err);
+    appendTranscript('⚠️ Could not play audio: ' + err.message);
+    if (currentAudio === audio) currentAudio = null;
+    aiSpeaking = false;
+    startRecognition();
+  });
+}
+
+function sendCopilotMessage(text) {
+  if (!copilotWS || copilotWS.readyState !== WebSocket.OPEN) return;
+  appendTranscript('👤 ' + text);
+  copilotWS.send(JSON.stringify({type: 'user_message', text: text}));
+}
+
+function sendCopilotQuestion() {
+  const input = document.getElementById('copilot-text-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendCopilotMessage(text);
+}
+
+function fmt(secs) {
+  const m = Math.floor(secs / 60);
+  const s = String(secs % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function startFrontendTimer(label, durationSeconds) {
+  if (activeTimers[label]) clearInterval(activeTimers[label].interval);
+
+  const bar = document.getElementById('copilot-timer-bar');
+
+  // Create a new tile for this timer
+  const tileId = 'timer-tile-' + label.replace(/\s+/g, '-');
+  let tile = document.getElementById(tileId);
+  if (!tile) {
+    tile = document.createElement('div');
+    tile.id = tileId;
+    tile.className = 'copilot-timer-tile';
+    tile.innerHTML = `
+      <span class="tile-icon">⏱️</span>
+      <div>
+        <div class="tile-label">${label}</div>
+        <div class="tile-countdown">${fmt(durationSeconds)}</div>
+      </div>
+      <button class="timer-stop-btn" title="Stop timer" onclick="cancelFrontendTimer('${label.replace(/'/g, "\\'")}', true)">✕</button>`;
+    bar.appendChild(tile);
+    bar.style.display = 'flex';
+  }
+
+  const countdownEl = tile.querySelector('.tile-countdown');
+
+  activeTimers[label] = { interval: null, remaining: durationSeconds, total: durationSeconds };
+
+  const interval = setInterval(function() {
+    activeTimers[label].remaining--;
+    countdownEl.textContent = fmt(activeTimers[label].remaining);
+    if (activeTimers[label].remaining <= 0) {
+      clearInterval(interval);
+      delete activeTimers[label];
+      tile.classList.add('expired');
+      countdownEl.textContent = '✓ Done';
+      tile.querySelector('.tile-label').textContent = label + ' · ' + fmt(durationSeconds);
+      if (copilotWS && copilotWS.readyState === WebSocket.OPEN) {
+        copilotWS.send(JSON.stringify({type: 'timer_expired', label: label}));
+      }
+    }
+  }, 1000);
+
+  activeTimers[label].interval = interval;
+}
+
+function markTimerComplete(label) {
+  const entry = activeTimers[label];
+  const tileId = 'timer-tile-' + label.replace(/\s+/g, '-');
+  const tile = document.getElementById(tileId);
+  if (!tile) return;
+
+  const elapsed = entry ? entry.total - entry.remaining : null;
+
+  if (entry) {
+    clearInterval(entry.interval);
+    delete activeTimers[label];
+  }
+
+  tile.classList.add('expired');
+  tile.querySelector('.tile-countdown').textContent = '✓ Done';
+  tile.querySelector('.tile-label').textContent = elapsed !== null
+    ? label + ' · ' + fmt(elapsed)
+    : label;
+}
+
+function adjustFrontendTimer(label, deltaSecs) {
+  const entry = activeTimers[label];
+  if (!entry) return;
+  entry.remaining = Math.max(1, entry.remaining + deltaSecs);
+  const tileId = 'timer-tile-' + label.replace(/\s+/g, '-');
+  const tile = document.getElementById(tileId);
+  if (tile) tile.querySelector('.tile-countdown').textContent = fmt(entry.remaining);
+}
+
+function cancelFrontendTimer(label, notifyAI) {
+  const entry = activeTimers[label];
+  if (entry) {
+    clearInterval(entry.interval);
+    delete activeTimers[label];
+  }
+  const tileId = 'timer-tile-' + label.replace(/\s+/g, '-');
+  const tile = document.getElementById(tileId);
+  if (tile) tile.remove();
+
+  const bar = document.getElementById('copilot-timer-bar');
+  if (bar && !bar.querySelector('.copilot-timer-tile')) {
+    bar.style.display = 'none';
+  }
+
+  if (notifyAI && copilotWS && copilotWS.readyState === WebSocket.OPEN) {
+    copilotWS.send(JSON.stringify({type: 'user_message', text: 'I stopped the ' + label + ' timer.'}));
+  }
+}
+
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    appendTranscript('⚠️ Speech recognition not supported in this browser. Use Chrome or Edge.');
+    return false;
+  }
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript.trim();
+    if (transcript) {
+      interruptAudio();
+      sendCopilotMessage(transcript);
+    }
+  };
+
+  recognition.onend = function() {
+    recognitionActive = false;
+    setMicIndicator(false);
+    // Auto-restart unless AI is speaking or copilot is closed
+    if (copilotWS && copilotWS.readyState === WebSocket.OPEN && !aiSpeaking) {
+      setTimeout(startRecognition, 300);
+    }
+  };
+
+  recognition.onerror = function(event) {
+    if (event.error === 'no-speech') return; // silently ignore silence
+    console.warn('Speech recognition error:', event.error);
+  };
+
+  return true;
+}
+
+function startRecognition() {
+  if (!recognition && !initRecognition()) return;
+  if (recognitionActive || aiSpeaking) return;
+  try {
+    recognition.start();
+    recognitionActive = true;
+    setMicIndicator(true);
+  } catch(e) {
+    // Already started — ignore
+  }
+}
+
+function stopRecognition() {
+  if (recognition && recognitionActive) {
+    recognition.stop();
+    recognitionActive = false;
+    setMicIndicator(false);
+  }
+}
+
+function setMicIndicator(listening) {
+  const dot = document.getElementById('mic-indicator');
+  if (!dot) return;
+  dot.style.background = listening ? '#4caf50' : '#555';
+  dot.style.boxShadow = listening ? '0 0 6px #4caf50' : 'none';
+  dot.title = listening ? 'Listening...' : 'Mic off';
+}
+
+function appendTranscript(text) {
+  const el = document.getElementById('copilot-transcript');
+  const line = document.createElement('p');
+  line.style.margin = '4px 0';
+  line.textContent = text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function showCopilotUI() {
+  document.getElementById('copilot-banner').style.display = 'flex';
+  document.getElementById('copilot-panel').style.display = 'block';
+  document.getElementById('copilot-start-btn').style.display = 'none';
+  document.body.style.paddingTop = '50px';
+  document.body.style.paddingBottom = '45vh';
+}
+
+function hideCopilotUI() {
+  stopRecognition();
+  document.getElementById('copilot-banner').style.display = 'none';
+  document.getElementById('copilot-timer-bar').style.display = 'none';
+  document.getElementById('copilot-timer-bar').innerHTML = '';
+  document.getElementById('copilot-panel').style.display = 'none';
+  document.getElementById('copilot-start-btn').style.display = 'flex';
+  document.body.style.paddingTop = '';
+  document.body.style.paddingBottom = '';
+  Object.values(activeTimers).forEach(function(t) { clearInterval(t.interval); });
+  activeTimers = {};
+  aiSpeaking = false;
+}
+
+function stopKitchenCopilot() {
+  if (!confirm('Stop Kitchen Copilot? Your cooking progress will be lost and you\'ll need to start over.')) return;
+  if (copilotWS) {
+    copilotWS.send(JSON.stringify({type: 'stop'}));
+    copilotWS.close();
+    copilotWS = null;
+  }
+  hideCopilotUI();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+# experiment1-pod-kill.yaml
+#
+# Chaos Experiment 1: Pod Kill Test
+# ──────────────────────────────────────────────────────────────────────────────
+# Selects one recipe-service pod at random and kills it (SIGKILL, no grace
+# period).  Kubernetes should detect the failure and reschedule a new pod
+# automatically, exercising the self-healing capabilities of the deployment.
+#
+# Apply:   kubectl apply  -f experiment1-pod-kill.yaml
+# Remove:  kubectl delete -f experiment1-pod-kill.yaml
+# Status:  kubectl describe podchaos pod-kill-recipe-service -n recipeapp
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-recipe-service
+  namespace: recipeapp
+spec:
+  action: pod-kill
+  mode: one                 # kill exactly one matching pod
+  gracePeriod: 0            # immediate kill (no graceful shutdown)
+  selector:
+    namespaces:
+      - recipeapp
+    labelSelectors:
+      app: recipe-service
+      version: stable

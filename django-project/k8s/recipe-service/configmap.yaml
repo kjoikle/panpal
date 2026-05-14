@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recipe-service-config
+  namespace: recipeapp
+data:
+  DEBUG: "False"
+  ALLOWED_HOSTS: "*"
+  ANALYTICS_SERVICE_URL: "http://analytics-service:8001"
+  SCRAPER_SERVICE_URL: "http://scraper-service:8002"
+  ANALYTICS_TIMEOUT: "2"
+  DB_ENGINE: "postgresql"
+  DB_HOST: "dpg-d5q04bfgi27c73aa5qcg-a.oregon-postgres.render.com"
+  DB_PORT: "5432"
+  DB_NAME: "advanced_swe_cooking_app"

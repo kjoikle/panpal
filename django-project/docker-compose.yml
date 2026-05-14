@@ -1,0 +1,121 @@
+services:
+  recipe-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: recipeapp_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - recipe-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  analytics-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: analytics_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - analytics-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  analytics-service:
+    build: ./services/analytics-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@analytics-db:5432/analytics_db
+      - SECRET_KEY=dev-secret-analytics
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,analytics-service,10.10.10.100
+      - INTERNAL_SERVICE_KEY=dev-internal-key
+    depends_on:
+      analytics-db:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn analyticsproject.wsgi:application --bind 0.0.0.0:8001 --workers 2"
+
+  scraper-service:
+    build: ./services/scraper-service
+    ports:
+      - "8002:8002"
+    env_file:
+      - ../.env
+    environment:
+      - SECRET_KEY=dev-secret-scraper
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,scraper-service
+      - INTERNAL_SERVICE_KEY=dev-internal-key
+      - SCRAPER_FETCH_TIMEOUT=10
+    command: gunicorn scraper_project.wsgi:application --bind 0.0.0.0:8002 --workers 2 --timeout 120
+
+  recipe-service:
+    build: ./services/recipe-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@recipe-db:5432/recipeapp_db
+      - SECRET_KEY=dev-secret-recipe
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,recipe-service,10.10.10.100
+      - ANALYTICS_SERVICE_URL=http://analytics-service:8001
+      - SCRAPER_SERVICE_URL=http://scraper-service:8002
+      - INTERNAL_SERVICE_KEY=dev-internal-key
+      - ANALYTICS_TIMEOUT=2
+      - COPILOT_SERVICE_WS_URL=ws://localhost:8003
+    depends_on:
+      recipe-db:
+        condition: service_healthy
+      analytics-service:
+        condition: service_started
+      scraper-service:
+        condition: service_started
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn recipeapp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  copilot-service:
+    build: ./services/copilot-service
+    ports:
+      - "8003:8003"
+    env_file:
+      - ../.env
+    environment:
+      - SECRET_KEY=dev-secret-copilot
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,copilot-service
+      - REDIS_URL=redis://redis:6379
+      - INTERNAL_SERVICE_KEY=dev-internal-key
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: daphne -b 0.0.0.0 -p 8003 copilotproject.asgi:application
+
+volumes:
+  recipe-db-data:
+  analytics-db-data:

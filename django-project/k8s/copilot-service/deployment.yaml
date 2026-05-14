@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: copilot-service
+  namespace: recipeapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: copilot-service
+  template:
+    metadata:
+      labels:
+        app: copilot-service
+    spec:
+      containers:
+        - name: copilot-service
+          image: copilot-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8003
+          envFrom:
+            - configMapRef:
+                name: copilot-service-config
+            - secretRef:
+                name: copilot-service-secret
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"

@@ -1,0 +1,10 @@
+django>=4.2,<5.0
+channels>=4.0
+channels-redis>=4.2
+daphne>=4.0
+langchain>=0.3
+langchain-openai>=0.3
+openai>=1.0
+elevenlabs>=1.0
+requests>=2.31
+python-dotenv>=1.0

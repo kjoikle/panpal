@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Description A/B Test — {{ recipe.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .test-container { max-width: 900px; margin: 0 auto; }
+  .subtitle { color: #666; margin-bottom: 32px; }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+  .card { border: 2px solid #ddd; border-radius: 10px; padding: 24px; }
+  .card .approach-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 12px; }
+  .card .description-text { font-size: 16px; line-height: 1.6; margin-bottom: 20px; min-height: 80px; }
+  .card button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
+  .card button:hover { background: #1d4ed8; }
+  .card.winner { border-color: #16a34a; }
+  .card.winner button { background: #16a34a; }
+  .card.loser { border-color: #dc2626; opacity: 0.6; }
+  hr { border: none; border-top: 1px solid #eee; margin: 40px 0; }
+  .elo-table { width: 100%; border-collapse: collapse; }
+  .elo-table th, .elo-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #eee; }
+  .elo-table th { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+  .elo-table tbody tr:first-child td { font-weight: 700; }
+  .result-msg { padding: 16px; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; margin-bottom: 24px; display: none; }
+  .reload-btn { display: inline-block; margin-top: 24px; padding: 10px 20px; background: #6b7280; color: white; border-radius: 6px; text-decoration: none; font-size: 14px; }
+  .reload-btn:hover { background: #4b5563; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="test-container">
+  <h1>Description A/B Test</h1>
+  <p class="subtitle">Recipe: <strong>{{ recipe.title }}</strong></p>
+
+  <div id="result-msg" class="result-msg"></div>
+
+  <div class="compare-grid" id="compare-grid">
+    {% for d in descriptions %}
+    <div class="card" id="card-{{ d.approach }}">
+      <div class="approach-label">Approach: {{ d.approach }}</div>
+      <div class="description-text">{{ d.content }}</div>
+      <button onclick="vote('{{ d.approach }}')">I prefer this one</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <a href="." class="reload-btn">Generate new pair</a>
+
+  <hr>
+
+  <h2>ELO Rankings</h2>
+  <table class="elo-table" id="elo-table">
+    <thead>
+      <tr><th>#</th><th>Approach</th><th>ELO Rating</th></tr>
+    </thead>
+    <tbody id="elo-tbody">
+      {% for row in rankings %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ row.approach }}</td>
+        <td>{{ row.rating }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3">No votes yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% block extra_js %}
+<script>
+  const recipeId = {{ recipe.pk }};
+  const approaches = {{ approaches_json|safe }};
+
+  function vote(preferred) {
+    const rejected = approaches.find(a => a !== preferred);
+
+    fetch(`/api/recipes/${recipeId}/describe/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferred_approach: preferred, rejected_approach: rejected }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'saved') {
+        document.getElementById('card-' + preferred).classList.add('winner');
+        document.getElementById('card-' + rejected).classList.add('loser');
+
+        const msg = document.getElementById('result-msg');
+        msg.textContent = `Voted! ELO updated — ${preferred}: ${data.elo[preferred]}, ${rejected}: ${data.elo[rejected]}`;
+        msg.style.display = 'block';
+
+        return fetch('/api/recipes/describe/rankings/');
+      }
+    })
+    .then(r => r && r.json())
+    .then(data => {
+      if (!data) return;
+      const tbody = document.getElementById('elo-tbody');
+      tbody.innerHTML = data.rankings.map((row, i) =>
+        `<tr><td>${i+1}</td><td>${row.approach}</td><td>${row.rating}</td></tr>`
+      ).join('');
+    })
+    .catch(err => console.error(err));
+  }
+</script>
+{% endblock %}
+{% endblock %}

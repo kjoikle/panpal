@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analytics-service-config
+  namespace: recipeapp
+data:
+  DEBUG: "False"
+  ALLOWED_HOSTS: "*"
+  DB_ENGINE: "postgresql"
+  DB_HOST: "analytics-db"
+  DB_PORT: "5432"
+  DB_NAME: "analytics_db"

@@ -1,0 +1,153 @@
+{% extends "base.html" %} 
+
+{% block title %}Edit Recipe - PanPal{% endblock %}
+
+{% block content %}
+<a href="{% url 'recipe_detail' recipe.pk %}" class="back-link">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path d="M12 3L5 10L12 17" stroke="currentColor" stroke-width="2" />
+  </svg>
+  Back to recipe
+</a>
+
+<div class="recipe-detail">
+  <div class="recipe-header">
+    <h1 class="recipe-title">Edit Recipe</h1>
+    <p style="color: #666; margin-top: 10px">Update your recipe details</p>
+  </div>
+
+  <div class="recipe-content">
+    <form method="post" novalidate class="recipe-form">
+      {% csrf_token %}
+        <input type="hidden" name="updated_at" value="{{ form.initial.updated_at|default:now|date:'c' }}">
+        {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="form-section">
+        <h2>Basic Information</h2>
+
+        <div class="form-group">
+          <label for="id_title">Recipe Title *</label>
+          {{ form.title }} {% if form.title.errors %}
+          <div class="field-error">{{ form.title.errors }}</div>
+          {% endif %} {% if form.title.help_text %}
+          <div class="field-help">{{ form.title.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="id_recipe_author">Recipe Author</label>
+          {{ form.recipe_author }} {% if form.recipe_author.errors %}
+          <div class="field-error">{{ form.recipe_author.errors }}</div>
+          {% endif %} {% if form.recipe_author.help_text %}
+          <div class="field-help">{{ form.recipe_author.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="id_description">Description *</label>
+          {{ form.description }} {% if form.description.errors %}
+          <div class="field-error">{{ form.description.errors }}</div>
+          {% endif %} {% if form.description.help_text %}
+          <div class="field-help">{{ form.description.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="id_prep_time">Prep Time (minutes)</label>
+            {{ form.prep_time }} {% if form.prep_time.errors %}
+            <div class="field-error">{{ form.prep_time.errors }}</div>
+            {% endif %} {% if form.prep_time.help_text %}
+            <div class="field-help">{{ form.prep_time.help_text }}</div>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="id_cook_time">Cook Time (minutes)</label>
+            {{ form.cook_time }} {% if form.cook_time.errors %}
+            <div class="field-error">{{ form.cook_time.errors }}</div>
+            {% endif %} {% if form.cook_time.help_text %}
+            <div class="field-help">{{ form.cook_time.help_text }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Categorization</h2>
+
+        <div class="form-group">
+          <label for="id_cuisine_type">Cuisine Type</label>
+          {{ form.cuisine_type }} {% if form.cuisine_type.errors %}
+          <div class="field-error">{{ form.cuisine_type.errors }}</div>
+          {% endif %} {% if form.cuisine_type.help_text %}
+          <div class="field-help">{{ form.cuisine_type.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="id_tags_csv">Additional Tags</label>
+          {{ form.tags_csv }} {% if form.tags_csv.errors %}
+          <div class="field-error">{{ form.tags_csv.errors }}</div>
+          {% endif %} {% if form.tags_csv.help_text %}
+          <div class="field-help">{{ form.tags_csv.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Source & Media</h2>
+
+        <div class="form-group">
+          <label for="id_source_url">Source URL</label>
+          {{ form.source_url }} {% if form.source_url.errors %}
+          <div class="field-error">{{ form.source_url.errors }}</div>
+          {% endif %} {% if form.source_url.help_text %}
+          <div class="field-help">{{ form.source_url.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="id_image_url">Image URL</label>
+          {{ form.image_url }} {% if form.image_url.errors %}
+          <div class="field-error">{{ form.image_url.errors }}</div>
+          {% endif %} {% if form.image_url.help_text %}
+          <div class="field-help">{{ form.image_url.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Recipe Details</h2>
+
+        <div class="form-group">
+          <label for="id_ingredients">Ingredients</label>
+          {{ form.ingredients }} {% if form.ingredients.errors %}
+          <div class="field-error">{{ form.ingredients.errors }}</div>
+          {% endif %} {% if form.ingredients.help_text %}
+          <div class="field-help">{{ form.ingredients.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="id_steps_text">Cooking Steps</label>
+          {{ form.steps_text }} {% if form.steps_text.errors %}
+          <div class="field-error">{{ form.steps_text.errors }}</div>
+          {% endif %} {% if form.steps_text.help_text %}
+          <div class="field-help">{{ form.steps_text.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Update Recipe</button>
+        <a href="{% url 'recipe_detail' recipe.pk %}" class="btn-secondary"
+          >Cancel</a
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

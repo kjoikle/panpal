@@ -1,0 +1,126 @@
+# Sprint 3 Report
+
+**Sprint Duration:** 11/12-11/19  
+**Team:** Daniel Lee, Nick Loxton, Lucia Patino, William Sharpe
+
+---
+
+## Sprint Goal & Achievement
+
+**Sprint Goal:** Complete user authentication system and enable users to manually create, save, and manage recipes with ingredients, instructions, and optional images.
+
+**Achievement Status:** ✅ **GOAL ACHIEVED**
+
+All 6 committed user stories (29 story points) completed with 100% completion rate. User authentication is fully functional, recipe creation with dynamic ingredients/instructions works seamlessly, image uploads are supported, and comprehensive unit tests ensure code quality.
+
+**Key Success Factors:** Effective use of Django's authentication framework, well-planned database model design, comprehensive unit test coverage (10 tests, 100% pass rate), and clean code organization.
+
+---
+
+## User Journey Demo
+
+**1. Registration → Login → Recipe Creation:**
+User creates account → automatically logged in → clicks "Create Recipe" → fills form with title, description, ingredients (dynamic add/remove), instructions (numbered steps), and optional image → recipe saved to database → redirected to detail page.
+
+**2. Recipe Management:**
+Logged-in user clicks "My Recipes" → sees grid of all recipes → clicks recipe card → views full details (ingredients, instructions, image) → can navigate back to list or homepage.
+
+**3. Logout:**
+User clicks "Log out" → session terminated → redirected to homepage with login/register options.
+
+**Demo Highlights:** All flows functional and intuitive, clear error handling, dynamic form fields enhance UX, images display correctly, seamless navigation.
+
+---
+
+## Completed Work
+
+| Story | Description | Points | Status |
+|-------|-------------|--------|--------|
+| 1 | User Authentication - Login | 5 | ✅ |
+| 2 | User Authentication - Registration | 5 | ✅ |
+| 3 | Manual Recipe Creation | 8 | ✅ |
+| 4 | Recipe Image Upload | 3 | ✅ |
+| 5 | Recipe Viewing and Management | 5 | ✅ |
+| 6 | Unit Tests for Authentication | 3 | ✅ |
+
+**Total:** 29 story points (100% completion)
+
+**Deliverables:** Complete authentication system, recipe creation form with dynamic fields, image upload (file/URL), recipe viewing interface, 10 unit tests, database models (Recipe, Ingredient, Step), 7 new templates, 15 files modified/created.
+
+**PR:** `feature/user-login` | **Commit:** `ce01eb6`
+
+---
+
+## Velocity Tracking
+
+| Sprint | Committed | Completed | Rate |
+|--------|-----------|-----------|------|
+| Sprint 2 | [Unknown] | [Unknown] | [Unknown] |
+| Sprint 3 | 29 | 29 | 100% |
+
+**Sprint 2 Velocity:** [To be determined]  
+**Sprint 3 Velocity:** 29 story points  
+**Average Velocity:** [Cannot calculate without Sprint 2 data]
+
+**Analysis:** Sprint 3 achieved 100% completion. All committed points delivered. Strong estimation accuracy demonstrated.
+
+---
+
+## Technical Progress
+
+### What's Working Well
+- **Authentication:** Django's built-in framework provides secure, reliable user management with seamless session handling
+- **Data Model:** Well-structured models (Recipe, Ingredient, Step) with proper relationships, ImageField support, scalable design
+- **Dynamic Forms:** JavaScript-powered ingredient/instruction fields with add/remove functionality, form validation
+- **Code Quality:** 10 unit tests (100% pass), clean Django best practices, proper separation of concerns
+- **Media Handling:** Image uploads working (file/URL), proper configuration, correct display
+
+### Technical Challenges Remaining
+1. **Image Storage:** Need cloud storage (S3/R2) for production (currently local)
+2. **Code Review:** Need formal review process before PR merges
+3. **User Testing:** Limited feedback during development; need early testing process
+4. **Documentation:** Sprint 2 docs incomplete; need historical data
+5. **Recipe CRUD:** Missing edit/delete functionality; prioritize for Sprint 4
+
+---
+
+## Sprint Retrospective Highlights
+
+### Key Insights
+**What Went Well:** (1) Successful authentication implementation, (2) Dynamic form UX, (3) Comprehensive test coverage, (4) Clean code organization, (5) Scalable database design
+
+**What Didn't Go Well:** (1) Image upload config took more time than anticipated, (2) Sprint 2 documentation incomplete, (3) Limited user feedback during development
+
+**What to Improve:** (1) Sprint planning & documentation (complete Sprint 2 review, establish template, include dependencies), (2) Development workflow (code reviews, weekly syncs, technical decision log), (3) User testing (create plan, identify test users, mid-sprint demos)
+
+### Top Action Items
+| Action | Owner | Deadline |
+|--------|-------|----------|
+| Complete Sprint 2 review | [Team Lead] | End Sprint 3 |
+| Implement code review process | [Tech Lead] | Before Sprint 4 |
+| Create user testing plan | [Product Owner] | Sprint 4 planning |
+| Document technical dependencies | [Tech Lead] | End Sprint 3 |
+
+---
+
+## Sprint 4 Preview
+
+**Priority Features:**
+1. **Recipe Editing & Deletion** (High) - Edit existing recipes, delete with confirmation
+2. **Recipe Search & Filtering** (High) - Search user's recipes, filter by tags/cuisine/dietary
+3. **Enhanced UX** (Medium) - Password reset, email verification, improved error messages
+4. **Social Features** (Medium) - Recipe sharing, favorites, comments, ratings
+
+**Technical Improvements:** Migrate to cloud image storage, implement code review process, enhance test coverage, improve documentation
+
+**Process Improvements:** Establish user testing workflow, improve sprint planning docs, enhance team communication
+
+---
+
+## Links
+
+**Sprint Docs:** [Planning](../sprints/sprint-3-planning.md) | [Review](../sprints/sprint-3-review.md) | [Retrospective](../sprints/sprint-3-retrospective.md)
+
+**Project:** [GitHub Board](https://github.com/users/luciavinapatino/projects/1) | [Repository](https://github.com/luciavinapatino/rough-frost) | Branch: `feature/user-login` | Commit: `ce01eb6`
+
+**Team Docs:** [Charter](../../docs/team-charter.md) | [DoD](../../docs/definition-of-done.md) | [DoR](../../docs/definition-of-ready.md)
