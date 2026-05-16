@@ -2,7 +2,7 @@
 
 A Django-based recipe management app built as three independent microservices with Docker, Kubernetes, and canary release support.
 
-Currently live at: [https://panpal-recipe.onrender.com]((https://panpal-recipe.onrender.com))
+Currently live at: [https://panpal-recipe.onrender.com](url)
 
 ## Architecture
 
