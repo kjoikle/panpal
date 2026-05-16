@@ -2,9 +2,11 @@
 
 A Django-based recipe management app built as three independent microservices with Docker, Kubernetes, and canary release support.
 
+Currently live at: [https://panpal-recipe.onrender.com]((https://panpal-recipe.onrender.com))
+
 ## Architecture
 
-The app is split into two services under `django-project/services/`:
+The app is split into three services under `django-project/services/`:
 
 - **recipe-service** (port 8000) — Recipe CRUD, user authentication, and the frontend UI
 - **analytics-service** (port 8001) — A/B test assignments and event tracking (internal API, not user-facing)
